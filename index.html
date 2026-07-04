@@ -41,6 +41,44 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/5.3.4/mqtt.min.js"></script>
+  <script>
+window.mqttBridge = {
+  client: null,
+  onMessage: null,
+  onConnect: null,
+  onDisconnect: null,
+  onError: null,
+
+  connect: function(broker, port, user, pass, clientId) {
+    if (this.client) { this.client.end(true); this.client = null; }
+    var url = 'wss://' + broker + ':' + port + '/mqtt';
+    this.client = mqtt.connect(url, {
+      username: user,
+      password: pass,
+      clientId: clientId,
+      protocolVersion: 4,
+      reconnectPeriod: 0,
+      connectTimeout: 8000
+    });
+    var self = this;
+    this.client.on('connect', function() {
+      ['sensors/temp','sensors/hum','sensors/pot/adc','sensors/pot/angulo','sensors/pot/voltaje','sensors/peso']
+        .forEach(function(t) { self.client.subscribe(t); });
+      if (self.onConnect) self.onConnect();
+    });
+    this.client.on('close',   function() { if (self.onDisconnect) self.onDisconnect(); });
+    this.client.on('error',   function(e){ if (self.onError)      self.onError(e.message || e.toString()); });
+    this.client.on('message', function(topic, payload) {
+      if (self.onMessage) self.onMessage(topic, payload.toString());
+    });
+  },
+
+  disconnect: function() {
+    if (this.client) { this.client.end(true); this.client = null; }
+  }
+};
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
